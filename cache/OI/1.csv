@@ -1,0 +1,2 @@
+code,name,open,close,high,low,settle,presettle,preclose,turnovervalue,volume,openinterest,date,pz,delivery_month,multiplier,ticksize,category,qualified,qualified_ma,qualified_ma_gt_0,group_num,next_c_chg,c_chg,adjusted_close,adjusted_open,adjusted_high,adjusted_low
+RO1109.CZC,菜油1109,10918.0,10808.0,10918.0,10772.0,10832.0,10956.0,10864.0,3261844100.0,60228,76506,2011-01-10,OI,201109,5,2.0,OI,1,0.0072992700729927005,True,3,0,0,10808.0,10918.0,10918.0,10772.0

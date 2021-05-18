@@ -1,0 +1,4 @@
+code,name,open,close,high,low,settle,presettle,preclose,turnovervalue,volume,openinterest,date,pz,delivery_month,multiplier,ticksize,category,qualified,qualified_ma,qualified_ma_gt_0,group_num,next_c_chg,c_chg,adjusted_close,adjusted_open,adjusted_high,adjusted_low
+lu2101,lu2101,2195.0,2239.0,2265.0,2183.0,2233.0,2209.0,2200.0,1167794310.0,52287,108376,2020-09-14,LU,202101,10,1.0,LU,1,0.0,True,1,0,0,2239.0,2195.0,2265.0,2183.0
+lu2101,lu2101,2234.0,2224.0,2245.0,2218.0,2231.0,2233.0,2239.0,766177450.0,34330,110454,2020-09-15,LU,202101,10,1.0,LU,-1,0.0,True,1,0,0,2224.0,2234.0,2245.0,2218.0
+lu2101,lu2101,2229.0,2260.0,2271.0,2223.0,2247.0,2231.0,2224.0,1121616260.0,49912,110893,2020-09-16,LU,202101,10,1.0,LU,-1,0.0,True,1,0,0,2260.0,2229.0,2271.0,2223.0
