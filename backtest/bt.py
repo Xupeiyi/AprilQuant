@@ -197,7 +197,7 @@ class CumReturn(bt.Analyzer):
     def next(self):
         cur_value = self.strategy.broker.getvalue()
         cur_cum_ret = self.prev_cum_ret * (cur_value / self.prev_value)
-        self.cum_rets[self.datas[0].datetime.date(0)] = cur_cum_ret
+        self.cum_rets[self.datas[0].datetime.datetime(0)] = cur_cum_ret
 
         self.prev_value = cur_value
         self.prev_cum_ret = cur_cum_ret

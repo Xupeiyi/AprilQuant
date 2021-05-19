@@ -37,12 +37,6 @@ class ChandelierSignalAdder:
     def __init__(self, df):
         self.df = df.copy()
 
-        if not self.has_column("next_c_chg", "c_chg"):
-            self.add_chg_signal()
-
-        if not self.has_column("adjusted_close", "adjusted_high", "adjusted_low", "adjusted_open"):
-            self.add_adjusted_price()
-
     def has_column(self, *columns):
         return set(columns) <= set(self.df.columns)
 
@@ -99,7 +93,7 @@ class ChandelierSignalAdder:
             - ema_length: 计算cci指数移动平均所需窗宽。
         """
 
-        if len(self.df) < max(length, ema_length):
+        if len(self.df) < length + ema_length:
             raise ValueError('数据长度过短，不足以生成开仓信号')
 
         # 开仓信号指标使用复权价格生成。
@@ -124,7 +118,7 @@ class ChandelierSignalAdder:
         )
         self.df['shortgo'] = self.df['shortgo'].shift(1).fillna(False)
 
-    def add_exit_signal(self, trs=0.12):
+    def add_exit_signal(self, trs=0.12, lqk_width=0.1, lqk_floor=0.5):
         """
         在self.df中标记平仓日期。非纯函数。平仓信号使用复权价格计算。
         平仓信号计算方法：开多头仓位时记当期开盘价为lower_after_entry，之后在
@@ -176,7 +170,7 @@ class ChandelierSignalAdder:
 
             # 有持仓时计算吊灯线
             if position_direction != 0:
-                self.df.liqka.iloc[i] = max(self.df.liqka.iloc[i - 1] - 0.1, 0.5)
+                self.df.liqka.iloc[i] = max(self.df.liqka.iloc[i - 1] - lqk_width, lqk_floor)
                 delta = self.df.adjusted_open.iloc[i] * trs * self.df.liqka.iloc[i]
 
                 if position_direction > 0:
@@ -224,3 +218,8 @@ class ChandelierSignalAdder:
                 continue
 
             self.df.position_direction.iloc[i] = self.df.position_direction.iloc[i - 1]
+
+
+if __name__ == '__main__':
+    import sys
+    print(sys.path)
