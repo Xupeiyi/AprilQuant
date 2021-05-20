@@ -144,7 +144,7 @@ class ChandelierSignalAdder:
         self.df['long_exit'] = False  # 多头平仓日期
         self.df['short_exit'] = False  # 空头平仓日期
 
-        for i in range(len(self.df)):
+        for i in range(len(self.df)-1):
 
             # 开多头
             if self.df.longgo.iloc[i] and position_direction <= 0:
@@ -218,8 +218,3 @@ class ChandelierSignalAdder:
                 continue
 
             self.df.position_direction.iloc[i] = self.df.position_direction.iloc[i - 1]
-
-
-if __name__ == '__main__':
-    import sys
-    print(sys.path)

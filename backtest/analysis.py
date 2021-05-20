@@ -1,5 +1,7 @@
 import pandas as pd
 
+from utils import expand
+
 
 def cal_cost_and_ret(cum_ret: pd.DataFrame):
     """
@@ -13,18 +15,11 @@ def cal_cost_and_ret(cum_ret: pd.DataFrame):
                         data={'cost': cost.values, 'ret': ret.values})
 
 
-def expand(ts: pd.DataFrame, expand_range: pd.DataFrame):
-    """
-    将一段时间序列扩展到所有交易日。
-    params:
-        - ts: 被扩展的序列。
-        - expand_ts: 要扩展到的交易日序列。
-    """
-    return expand_range.join(ts)
-
-
 def cal_avg_cum_ret(cum_rets, time_range):
-    """计算平均累计收益率。"""
+    """
+    计算平均累计收益率。
+    cum_rets:defaultdict(list)
+    """
     c_and_rs = [cal_cost_and_ret(cum_ret)
                 for cum_ret_list in cum_rets.values()
                 for cum_ret in cum_ret_list]

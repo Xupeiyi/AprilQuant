@@ -187,20 +187,24 @@ class Strategy(bt.Strategy):
 
 
 class CumReturn(bt.Analyzer):
-    """记录每一期的账户价值"""
+    """记录每一期的累计收益率"""
 
     def __init__(self):
         self.cum_rets = OrderedDict()
         self.prev_value = self.strategy.broker.getvalue()
         self.prev_cum_ret = 1
+        self.time = None
 
     def next(self):
-        cur_value = self.strategy.broker.getvalue()
-        cur_cum_ret = self.prev_cum_ret * (cur_value / self.prev_value)
-        self.cum_rets[self.datas[0].datetime.datetime(0)] = cur_cum_ret
-
-        self.prev_value = cur_value
-        self.prev_cum_ret = cur_cum_ret
+        # 在bar开始时记录时间
+        if len(self) % 2 == 1:
+            self.time = self.datas[0].datetime.datetime(0)
+        else:
+            cur_value = self.strategy.broker.getvalue()
+            cur_cum_ret = self.prev_cum_ret * (cur_value / self.prev_value)
+            self.cum_rets[self.time] = cur_cum_ret
+            self.prev_value = cur_value
+            self.prev_cum_ret = cur_cum_ret
 
     def get_analysis(self):
         return pd.DataFrame(index=self.cum_rets.keys(), data={'cum_ret': self.cum_rets.values()})
@@ -233,3 +237,16 @@ def run_bt_backtest(df, printlog=False, cash=2000000, commission=0.0001):
     results = cerebro.run()
     cum_ret = results[0].analyzers.CumReturn.get_analysis()
     return cum_ret
+
+
+if __name__ == '__main__':
+    df = pd.read_csv('../cache/A/0.csv', parse_dates=['date'])
+    lg = [0] * len(df)
+    le = [0] * len(df)
+    lg[2] = 1
+    le[20] = 1
+    df['longgo'] = lg
+    df['shortgo'] = 0
+    df['long_exit'] = le
+    df['short_exit'] = 0
+    run_bt_backtest(df)

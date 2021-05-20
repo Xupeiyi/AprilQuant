@@ -92,11 +92,14 @@ def test_many(testers, max_workers=20, pg_bar=True):
 
 
 if __name__ == '__main__':
-    length_rng = range(40, 120, 10)
-    ema_length_rng = range(100, 180, 10)
-    trs_rng = (0.01 * t for t in range(10, 20, 2))
-    lqk_width_rng = (0.1 * w for w in range(1, 4, 1))
-    lqk_floor_rng = (0.1 * f for f in range(3, 6, 1))
+    length_rng = range(20, 120, 10)
+    ema_length_rng = range(80, 240, 10)
+    # trs_rng = (0.01 * t for t in range(10, 20, 2))
+    # lqk_width_rng = (0.1 * w for w in range(1, 4, 1))
+    # lqk_floor_rng = (0.1 * f for f in range(3, 6, 1))
+    trs_rng = (0.12,)
+    lqk_width_rng = (0.1,)
+    lqk_floor_rng = (0.5,)
 
     data_label_list = ({'category': category, 'idx': idx}
                        for category, df_list in Tester.backtest_data.items()
@@ -109,16 +112,16 @@ if __name__ == '__main__':
                                in product(trs_rng, lqk_width_rng, lqk_floor_rng))
     params_list = list({'data_label': data_label, 'enter_signal': enter_signal_params, 'exit_signal': exit_signal_params}
                        for data_label, enter_signal_params, exit_signal_params
-                       in product(data_label_list, enter_signal_params_list, exit_signal_params_list))
+                       in product(data_label_list, enter_signal_params_list, exit_signal_params_list))[:0]
 
     BATCH = 100
-    size = int(len(params_list) / BATCH) + 1
+    iters = int(len(params_list) / BATCH) + 1
 
-    for i in range(BATCH):
-        params_sample = params_list[size*i: size*(i+1)]
+    for i in range(iters):
+        params_sample = params_list[BATCH*i: BATCH*(i+1)]
         testers_list = (Tester(params) for params in params_sample)
         results = test_many(testers_list)
-        save_results(results)
-        print(f'batch {i} completed!')
+        # save_results(results)
+        print(f'batch {i} in {iters} completed!')
 
 
