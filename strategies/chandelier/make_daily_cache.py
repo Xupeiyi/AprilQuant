@@ -15,6 +15,6 @@ if __name__ == '__main__':
             signal_adder.add_chg_signal()
             signal_adder.add_adjusted_price()
 
-            directory_path = f'../../cache/{category}'
+            directory_path = f'../../cache/daily/{category}'
             mkdirs(directory_path)
             signal_adder.df.to_csv(f'{directory_path}/{i}.csv', encoding='utf-8', index=False)

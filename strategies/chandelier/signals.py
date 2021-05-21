@@ -93,7 +93,7 @@ class ChandelierSignalAdder:
             - ema_length: 计算cci指数移动平均所需窗宽。
         """
 
-        if len(self.df) < length + ema_length:
+        if len(self.df) <= 2 * (length - 1) + ema_length - 1:
             raise ValueError('数据长度过短，不足以生成开仓信号')
 
         # 开仓信号指标使用复权价格生成。

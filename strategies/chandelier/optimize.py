@@ -14,28 +14,26 @@ from backtest import run_bt_backtest, run_pd_backtest
 warnings.filterwarnings('ignore')
 
 
-def read_cache():
-    root_path = '..\\..\\cache\\'
-    categories = os.listdir(root_path)
-
-    backtest_data = defaultdict(list)
-
-    for category in categories:
-        category_path = root_path + f'{category}\\'
-        csv_files = os.listdir(category_path)
-        for file in csv_files:
-            df = pd.read_csv(category_path + file, parse_dates=['date'])
-            backtest_data[category].append(df)
-
-    return backtest_data
-
-
 class Tester:
-    backtest_data = read_cache()
+    backtest_data = None
 
     def __init__(self, params):
         # 数据标记
         self.params = params
+
+    @classmethod
+    def read_cache(cls, level):
+        root_path = f'..\\..\\cache\\{level}\\'
+        categories = os.listdir(root_path)
+
+        cls.backtest_data = defaultdict(list)
+
+        for category in categories:
+            category_path = root_path + f'{category}\\'
+            csv_files = os.listdir(category_path)
+            for file in csv_files:
+                df = pd.read_csv(category_path + file, parse_dates=['date'])
+                cls.backtest_data[category].append(df)
 
     def test(self):
 
@@ -44,6 +42,8 @@ class Tester:
 
         df = self.backtest_data[category][idx]
         signal_adder = ChandelierSignalAdder(df)
+        # print(f"testing {category}, {idx}, {len(df)}, "
+        #       f"{self.params['enter_signal']['length']}, {self.params['enter_signal']['ema_length']}")
 
         res = dict()
         res['params'] = self.params
@@ -61,10 +61,10 @@ class Tester:
         return res
 
 
-def save_results(results):
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
-    db = client["AprilQuant"]
-    col = db['chandelier']
+def save_results(results, col_name, client_name="mongodb://localhost:27017/", db_name="AprilQuant"):
+    client = pymongo.MongoClient(client_name)
+    db = client[db_name]
+    col = db[col_name]
     col.insert_many(results)
     return
 
@@ -91,16 +91,8 @@ def test_many(testers, max_workers=20, pg_bar=True):
     return results
 
 
-if __name__ == '__main__':
-    length_rng = range(20, 120, 10)
-    ema_length_rng = range(80, 240, 10)
-    # trs_rng = (0.01 * t for t in range(10, 20, 2))
-    # lqk_width_rng = (0.1 * w for w in range(1, 4, 1))
-    # lqk_floor_rng = (0.1 * f for f in range(3, 6, 1))
-    trs_rng = (0.12,)
-    lqk_width_rng = (0.1,)
-    lqk_floor_rng = (0.5,)
-
+def gen_params_list(Tester, length_rng=(60,), ema_length_rng=(150,),
+                    trs_rng=(0.12,), lqk_width_rng=(0.1,), lqk_floor_rng=(0.5,)):
     data_label_list = ({'category': category, 'idx': idx}
                        for category, df_list in Tester.backtest_data.items()
                        for idx, _ in enumerate(df_list))
@@ -110,18 +102,12 @@ if __name__ == '__main__':
     exit_signal_params_list = ({'trs': trs, 'lqk_width': lqk_width, 'lqk_floor': lqk_floor}
                                for trs, lqk_width, lqk_floor
                                in product(trs_rng, lqk_width_rng, lqk_floor_rng))
-    params_list = list({'data_label': data_label, 'enter_signal': enter_signal_params, 'exit_signal': exit_signal_params}
-                       for data_label, enter_signal_params, exit_signal_params
-                       in product(data_label_list, enter_signal_params_list, exit_signal_params_list))[:0]
+    params_list = list({'data_label': data_label,
+                        'enter_signal': enter_signal_params,
+                        'exit_signal': exit_signal_params}
+                       for enter_signal_params, exit_signal_params, data_label
+                       in product(enter_signal_params_list, exit_signal_params_list, data_label_list))
+    return params_list
 
-    BATCH = 100
-    iters = int(len(params_list) / BATCH) + 1
-
-    for i in range(iters):
-        params_sample = params_list[BATCH*i: BATCH*(i+1)]
-        testers_list = (Tester(params) for params in params_sample)
-        results = test_many(testers_list)
-        # save_results(results)
-        print(f'batch {i} in {iters} completed!')
 
 

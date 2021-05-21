@@ -1,6 +1,5 @@
+from functools import reduce
 import pandas as pd
-
-from utils import expand
 
 
 def cal_cost_and_ret(cum_ret: pd.DataFrame):
@@ -15,16 +14,16 @@ def cal_cost_and_ret(cum_ret: pd.DataFrame):
                         data={'cost': cost.values, 'ret': ret.values})
 
 
-def cal_avg_cum_ret(cum_rets, time_range):
+def fill0_add(x: pd.DataFrame, y: pd.DataFrame):
+    return x.add(y, fill_value=0)
+
+
+def cal_avg_cum_ret(cum_rets: list):
     """
     计算平均累计收益率。
-    cum_rets:defaultdict(list)
     """
-    c_and_rs = [cal_cost_and_ret(cum_ret)
-                for cum_ret_list in cum_rets.values()
-                for cum_ret in cum_ret_list]
-    expanded_c_and_rs = [expand(c_and_r, time_range).fillna(0) for c_and_r in c_and_rs]
-    sum_c_and_r = sum(expanded_c_and_rs)
+    c_and_rs = [cal_cost_and_ret(cum_ret) for cum_ret in cum_rets]
+    sum_c_and_r = reduce(fill0_add, c_and_rs)
     sum_c_and_r['avg_ret'] = (sum_c_and_r['ret'] / sum_c_and_r['cost']).fillna(0)
     sum_c_and_r['avg_cum_ret'] = (1 + sum_c_and_r['avg_ret']).cumprod()
     return sum_c_and_r['avg_cum_ret']
