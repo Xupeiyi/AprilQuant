@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import talib
 
@@ -56,17 +57,17 @@ class ChandelierSignalAdder:
                 self.df.next_c_chg.iloc[i] = 1
                 self.df.c_chg.iloc[i + 1] = 1
 
-                # 将换合约后一天的开盘价修改为前收盘价，仿佛是在前一天收盘时完成交易。
-                self.df.open.iloc[i + 1] = self.df.preclose.iloc[i + 1]
-
     def cal_adjust_factor(self):
         """
         计算复权因子。
         params:
             - df: 一段连续的行情数据。需要行情中包括close和preclose。
         """
-        return_rate = self.df['close'] / self.df['preclose'] - 1
-        adjust_factor = (1 + return_rate).cumprod()
+        if 0 in self.df['preclose'].values:
+            raise ZeroDivisionError("preclose字段中存在0！")
+
+        price_chg = self.df['close'] / self.df['preclose']
+        adjust_factor = price_chg.cumprod()
         return adjust_factor
 
     def add_adjusted_price(self):
@@ -76,9 +77,14 @@ class ChandelierSignalAdder:
             - df: 一段连续的行情数据。需要行情中包括open, close, high, low, preclose。
         """
         adjust_factor = self.cal_adjust_factor()
+        if 0 in adjust_factor.values:
+            raise ZeroDivisionError("复权因子中存在0！")
         self.df['adjusted_close'] = adjust_factor * (self.df['close'].iloc[0] / adjust_factor.iloc[0])
 
         # 对 open, high, low 以同比例放缩
+        if 0 in self.df['close'].values:
+            raise ZeroDivisionError("close字段中存在0！")
+
         r = self.df['adjusted_close'] / self.df['close']
         for price in ['open', 'high', 'low']:
             self.df['adjusted_' + price] = self.df[price] * r

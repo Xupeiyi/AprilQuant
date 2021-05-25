@@ -1,5 +1,6 @@
 import os
 import warnings
+import traceback
 from collections import defaultdict
 from concurrent import futures
 from itertools import product
@@ -42,8 +43,6 @@ class Tester:
 
         df = self.backtest_data[category][idx]
         signal_adder = ChandelierSignalAdder(df)
-        # print(f"testing {category}, {idx}, {len(df)}, "
-        #       f"{self.params['enter_signal']['length']}, {self.params['enter_signal']['ema_length']}")
 
         res = dict()
         res['params'] = self.params
@@ -51,6 +50,10 @@ class Tester:
             signal_adder.add_enter_signal(**self.params['enter_signal'])
         except ValueError as e:
             res['error'] = str(e)
+        except ZeroDivisionError as e:
+            print(str(e))
+            print(self.params['data_label'])
+            print('\n')
         else:
             signal_adder.add_exit_signal(**self.params['exit_signal'])
             signal_adder.add_position_direction()
@@ -61,7 +64,7 @@ class Tester:
         return res
 
 
-def save_results(results, col_name, client_name="mongodb://localhost:27017/", db_name="AprilQuant"):
+def save_results(results, db_name, col_name, client_name="mongodb://localhost:27017/"):
     client = pymongo.MongoClient(client_name)
     db = client[db_name]
     col = db[col_name]
