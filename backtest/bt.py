@@ -211,7 +211,7 @@ class CumReturn(bt.Analyzer):
 
 
 def run_bt_backtest(df, printlog=False, cash=2000000, commission=0.0001):
-    """生成回测对象"""
+    """生成回测对象. 目前只对日级数据有效。"""
 
     cerebro = bt.Cerebro(runonce=False, cheat_on_open=True)
 
@@ -219,7 +219,7 @@ def run_bt_backtest(df, printlog=False, cash=2000000, commission=0.0001):
     cerebro.addstrategy(Strategy, printlog=printlog)
 
     # 添加数据
-    datafeed = CommodityPandasData(dataname=df, datetime='date',
+    datafeed = CommodityPandasData(dataname=df, datetime='datetime',
                                    open='open', close='close',
                                    high='high', low='low',
                                    volume='volume', openinterest=-1, )
@@ -240,7 +240,7 @@ def run_bt_backtest(df, printlog=False, cash=2000000, commission=0.0001):
 
 
 if __name__ == '__main__':
-    df = pd.read_csv('../cache/A/0.csv', parse_dates=['date'])
+    df = pd.read_csv('../cache/A/0.csv', parse_dates=['datetime'])
     lg = [0] * len(df)
     le = [0] * len(df)
     lg[2] = 1

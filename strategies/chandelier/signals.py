@@ -48,14 +48,10 @@ class ChandelierSignalAdder:
             - df: 一段连续的行情数据。需要行情中包括合约交割月份delivery_month。
         """
 
-        self.df['next_c_chg'] = 0  # 在更换合约前一天置1
-        self.df['c_chg'] = 0  # 在更换合约后一天置1
-        for i in range(len(self.df) - 1):
-
-            # 如果合约交割日期发生变化，则认为合约被更换
-            if self.df.iloc[i].delivery_month != self.df.iloc[i + 1].delivery_month:
-                self.df.next_c_chg.iloc[i] = 1
-                self.df.c_chg.iloc[i + 1] = 1
+        self.df['next_c_chg'] = (self.df.deliv_mon != self.df.deliv_mon.shift(-1).fillna(self.df.deliv_mon.iloc[-1]))
+        self.df['c_chg'] = (self.df.deliv_mon != self.df.deliv_mon.shift(1).fillna(self.df.deliv_mon.iloc[0]))
+        self.df['next_c_chg'] = self.df['next_c_chg'].astype('int')
+        self.df['c_chg'] = self.df['c_chg'].astype('int')
 
     def cal_adjust_factor(self):
         """

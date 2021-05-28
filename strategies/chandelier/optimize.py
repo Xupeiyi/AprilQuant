@@ -8,9 +8,11 @@ from itertools import product
 import tqdm
 import pymongo
 import pandas as pd
+from empyrical import sharpe_ratio
 
 from signals import ChandelierSignalAdder
-from backtest import run_bt_backtest, run_pd_backtest
+from backtest import run_pd_backtest, cum_ret_to_daily_ret
+
 
 warnings.filterwarnings('ignore')
 
@@ -33,7 +35,7 @@ class Tester:
             category_path = root_path + f'{category}\\'
             csv_files = os.listdir(category_path)
             for file in csv_files:
-                df = pd.read_csv(category_path + file, parse_dates=['date'])
+                df = pd.read_csv(category_path + file, parse_dates=['datetime'])
                 cls.backtest_data[category].append(df)
 
     def test(self):
@@ -50,16 +52,19 @@ class Tester:
             signal_adder.add_enter_signal(**self.params['enter_signal'])
         except ValueError as e:
             res['error'] = str(e)
-        except ZeroDivisionError as e:
-            print(str(e))
+        except:
             print(self.params['data_label'])
             print('\n')
         else:
             signal_adder.add_exit_signal(**self.params['exit_signal'])
             signal_adder.add_position_direction()
 
-            res['bt_cum_ret'] = run_bt_backtest(signal_adder.df).reset_index().to_dict('list')
-            res['pd_cum_ret'] = run_pd_backtest(signal_adder.df).reset_index().to_dict('list')
+            cum_ret = run_pd_backtest(signal_adder.df)
+            res['cum_ret'] = cum_ret.reset_index().to_dict('list')
+
+            # sharpe比率
+            daily_ret = cum_ret_to_daily_ret(cum_ret)
+            res['sharpe_ratio'] = sharpe_ratio(daily_ret, period='daily')
 
         return res
 
@@ -94,11 +99,12 @@ def test_many(testers, max_workers=20, pg_bar=True):
     return results
 
 
-def gen_params_list(Tester, length_rng=(60,), ema_length_rng=(150,),
+def gen_params_list(tester, category_rng=None, length_rng=(60,), ema_length_rng=(150,),
                     trs_rng=(0.12,), lqk_width_rng=(0.1,), lqk_floor_rng=(0.5,)):
+    category_rng = category_rng or tester.backtest_data.keys()
     data_label_list = ({'category': category, 'idx': idx}
-                       for category, df_list in Tester.backtest_data.items()
-                       for idx, _ in enumerate(df_list))
+                       for category in category_rng
+                       for idx, _ in enumerate(tester.backtest_data[category]))
     enter_signal_params_list = ({'length': length, 'ema_length': ema_length}
                                 for length, ema_length
                                 in product(length_rng, ema_length_rng))
@@ -108,8 +114,8 @@ def gen_params_list(Tester, length_rng=(60,), ema_length_rng=(150,),
     params_list = list({'data_label': data_label,
                         'enter_signal': enter_signal_params,
                         'exit_signal': exit_signal_params}
-                       for enter_signal_params, exit_signal_params, data_label
-                       in product(enter_signal_params_list, exit_signal_params_list, data_label_list))
+                       for data_label, enter_signal_params, exit_signal_params
+                       in product(data_label_list, enter_signal_params_list, exit_signal_params_list))
     return params_list
 
 

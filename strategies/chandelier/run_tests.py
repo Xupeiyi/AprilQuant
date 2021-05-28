@@ -6,13 +6,16 @@ LEVEL = '15min'
 Tester.read_cache(LEVEL)
 
 if __name__ == '__main__':
-    length_rng = (60,)
-    ema_length_rng = (150,)
+    # length_rng = (60,)
+    # ema_length_rng = (150,)
     # trs_rng = (0.01 * t for t in range(10, 20, 2))
     # lqk_width_rng = (0.1 * w for w in range(1, 4, 1))
     # lqk_floor_rng = (0.1 * f for f in range(3, 6, 1))
 
-    params_list = gen_params_list(Tester, length_rng, ema_length_rng)
+    params_list = gen_params_list(Tester,
+                                  length_rng=(60,),
+                                  ema_length_rng=(150,),
+                                  trs_rng=(0.012,))
 
     BATCH = 100
     iters = int(len(params_list) / BATCH) + 1
@@ -22,7 +25,7 @@ if __name__ == '__main__':
         params_sample = params_list[BATCH*i: BATCH*(i+1)]
         testers_list = (Tester(params) for params in params_sample)
         results = test_many(testers_list, max_workers=20)
-        # save_results(results, db_name='Chandelier', col_name=LEVEL)
+        save_results(results, db_name='Chandelier', col_name=LEVEL)
         print(f'batch {i+1} in {iters} completed!')
     end = time.time()
     print(f'Used time: {end - start}')

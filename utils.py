@@ -3,7 +3,9 @@ import os
 
 from datetime import datetime
 import pandas as pd
+import numpy as np
 import talib
+import empyrical
 
 
 def mkdirs(path):
@@ -15,10 +17,10 @@ def get_trading_days(data: pd.DataFrame):
     """
     获得全部交易日期。
     params:
-        - data：所有品种完整的行情序列。需包括交易日期字段date。
+        - data：所有品种完整的行情序列。需包括交易日期字段datetime。
     """
     return sorted([datetime.fromtimestamp(ts/1e9 - 8*3600).date()
-                   for ts in data.date.unique().tolist()])
+                   for ts in data.datetime.unique().tolist()])
 
 
 def get_commodity_category(code: str):
@@ -51,22 +53,16 @@ def select_high_liquidity_data(df: pd.DataFrame, threshold=50000, period=1 / 20)
         - qualified_data: 从df中选取的几段行情数据。
     """
 
-    df['qualified'] = df.volume.apply(lambda x: 1 if x >= threshold else -1)
-    df['qualified_ma'] = talib.SMA(df.qualified, len(df) * period)
-    df['qualified_ma_gt_0'] = df.qualified_ma >= 0
+    df['volume_gt_threshold'] = df.volume.apply(lambda x: 1 if x >= threshold else -1)
+    df['volume_gt_threshold_ma'] = talib.SMA(df.volume_gt_threshold, len(df) * period)
+    df['qualified'] = df.volume_gt_threshold_ma >= 0
 
-    # 根据qualified_ma_gt_0将df分段，每一段数据中qualified_ma_gt_0都为True，或False
-    df['group_num'] = 0
-    group_num = 0
-    for i in range(1, len(df)):
-        if df.qualified_ma_gt_0.iloc[i] != df.qualified_ma_gt_0.iloc[i - 1]:
-            group_num += 1
-        df.group_num.iloc[i] = group_num
+    # 根据qualified将df分段，每一段数据中qualified都为True，或False
+    df['qualified_chg'] = (df.qualified != df.qualified.shift(1).fillna(df.qualified.iloc[0]))
+    df['group_num'] = df['qualified_chg'].astype('int').cumsum()
 
-    # 选出那些qualified_ma_gt_0为True的片段
     qualified_data = [sub_df for group_num, sub_df
-                      in df.groupby('group_num')
-                      if sub_df.qualified_ma_gt_0.all()]
+                      in df[df.qualified != 0].groupby('group_num')]
     return qualified_data
 
 
@@ -78,3 +74,6 @@ def expand(ts: pd.DataFrame, expand_range: pd.DataFrame):
         - expand_ts: 要扩展到的交易日序列。
     """
     return expand_range.join(ts)
+
+
+
