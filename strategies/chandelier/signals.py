@@ -23,16 +23,6 @@ def cal_recent_low(low: pd.Series, length: int):
     return low.rolling(length).min().shift(1)
 
 
-def cal_cci(high: pd.Series, low: pd.Series, close: pd.Series, length: int):
-    """计算CCI的指数移动平均"""
-    tp = (high + low + close) / 3.0
-    tpmean = tp.rolling(length).sum() / length
-    dev = tp - tpmean
-    meandev = abs(dev).rolling(length).sum() / length
-    cci = dev / (0.015 * meandev)
-    return cci
-
-
 class ChandelierSignalAdder:
 
     def __init__(self, df):
@@ -95,14 +85,14 @@ class ChandelierSignalAdder:
             - ema_length: 计算cci指数移动平均所需窗宽。
         """
 
-        if len(self.df) <= 2 * (length - 1) + ema_length - 1:
+        if len(self.df) <= max(length - 1, ema_length - 1):
             raise ValueError('数据长度过短，不足以生成开仓信号')
 
         # 开仓信号指标使用复权价格生成。
         self.df['recent_high'] = cal_recent_high(self.df.adjusted_high, length)
         self.df['recent_low'] = cal_recent_low(self.df.adjusted_low, length)
         self.df['avg_high_low'] = (self.df.adjusted_high + self.df.adjusted_low) * 0.5
-        self.df['cci'] = cal_cci(self.df.adjusted_high, self.df.adjusted_low, self.df.adjusted_close, length)
+        self.df['cci'] = talib.CCI(self.df.adjusted_high, self.df.adjusted_low, self.df.adjusted_close, length)
         self.df['cci_ema'] = talib.EMA(self.df.cci, timeperiod=ema_length)
 
         # 标记开仓日期longgo, shortgo。开仓日期为实际发生交易的日期，是计算出信号的后一天

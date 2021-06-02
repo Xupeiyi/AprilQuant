@@ -6,12 +6,12 @@ from functools import partial
 
 from dateutil.parser import parse
 
-from optimize import Tester
-from signals import ChandelierSignalAdder
+from .optimize import Tester
+from .signals import ChandelierSignalAdder
 from utils import mkdirs
 
 Tester.read_cache('daily')
-ROOT_DIR = '..\\..\\data\\minute\\'
+ROOT_DIR = os.path.dirname(os.path.realpath(__file__)) + '.\\..\\..\\data\\minute\\'
 
 
 def extract_category_from_file_name(file_name: str) -> str:

@@ -1,7 +1,7 @@
 import time
 from optimize import Tester, gen_params_list, test_many, save_results
 
-LEVEL = '15min'
+LEVEL = 'daily'
 
 Tester.read_cache(LEVEL)
 
@@ -13,9 +13,8 @@ if __name__ == '__main__':
     # lqk_floor_rng = (0.1 * f for f in range(3, 6, 1))
 
     params_list = gen_params_list(Tester,
-                                  length_rng=(60,),
-                                  ema_length_rng=(150,),
-                                  trs_rng=(0.012,))
+                                  length_rng=(80,),
+                                  ema_length_rng=(200,))
 
     BATCH = 100
     iters = int(len(params_list) / BATCH) + 1

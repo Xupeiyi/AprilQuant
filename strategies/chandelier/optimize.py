@@ -20,13 +20,14 @@ warnings.filterwarnings('ignore')
 class Tester:
     backtest_data = None
 
-    def __init__(self, params):
+    def __init__(self, params, df=None):
         # 数据标记
         self.params = params
+        self.df = df
 
     @classmethod
     def read_cache(cls, level):
-        root_path = f'..\\..\\cache\\{level}\\'
+        root_path = os.path.dirname(os.path.realpath(__file__)) + f'.\\..\\..\\cache\\{level}\\'
         categories = os.listdir(root_path)
 
         cls.backtest_data = defaultdict(list)
@@ -39,11 +40,13 @@ class Tester:
                 cls.backtest_data[category].append(df)
 
     def test(self):
+        if self.df is None:
+            category = self.params['data_label']['category']
+            idx = self.params['data_label']['idx']
+            df = self.backtest_data[category][idx]
+        else:
+            df = self.df
 
-        category = self.params['data_label']['category']
-        idx = self.params['data_label']['idx']
-
-        df = self.backtest_data[category][idx]
         signal_adder = ChandelierSignalAdder(df)
 
         res = dict()

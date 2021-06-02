@@ -2,7 +2,7 @@ from optimize import Tester, save_results
 from signals import ChandelierSignalAdder
 from backtest import run_pd_backtest
 
-LEVEL = '15min'
+LEVEL = 'daily'
 Tester.read_cache(LEVEL)
 
 
