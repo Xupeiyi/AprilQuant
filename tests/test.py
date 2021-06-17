@@ -3,9 +3,8 @@ import unittest
 import pandas as pd
 
 from utils import select_high_liquidity_data
-from backtest import run_pd_backtest, cal_avg_cum_ret
-from strategies.chandelier.signals import ChandelierSignalAdder, cal_recent_high, cal_recent_low
-from strategies.chandelier.make_minute_cache import resample_minute_data, correct_preclose
+from strategies.CCI.signals import ChandelierSignalAdder
+from strategies.CCI.make_minute_cache import resample_minute_data, correct_preclose
 
 
 class SelectHighLiquidityDataTest(unittest.TestCase):
@@ -20,76 +19,6 @@ class SelectHighLiquidityDataTest(unittest.TestCase):
                               '2010/1/29', '2010/1/30', '2010/1/31', '2010/2/1', '2010/2/2'],
                              res[1].datetime.values.tolist())
 
-
-class RunPdBacktestTest(unittest.TestCase):
-
-    COMMISSION = 0.01
-
-    def read_csv(self, file_name):
-        df = pd.read_csv(f'./test_data/pd_backtest/{file_name}', parse_dates=['datetime'])
-        df[['longgo', 'long_exit', 'shortgo', 'short_exit', 'next_c_chg', 'c_chg']] =\
-            df[['longgo', 'long_exit', 'shortgo', 'short_exit', 'next_c_chg', 'c_chg']].astype('bool')
-        return df
-
-    def test_chg_between_longgo_long_exit(self):
-        df = self.read_csv('chg_between_longgo_long_exit.csv')
-        df['cum_ret'] = run_pd_backtest(df, commission=self.COMMISSION).values
-        deviate = abs(df['ans'] - df['cum_ret']).sum()
-        self.assertAlmostEqual(deviate, 0)
-
-    def test_chg_between_shortgo_short_exit(self):
-        df = self.read_csv('chg_between_shortgo_short_exit.csv')
-        df['cum_ret'] = run_pd_backtest(df, commission=self.COMMISSION).values
-        deviate = abs(df['ans'] - df['cum_ret']).sum()
-        self.assertAlmostEqual(deviate, 0)
-
-    def test_next_c_chg_on_longgo(self):
-        df = self.read_csv('next_c_chg_on_longgo.csv')
-        df['cum_ret'] = run_pd_backtest(df, commission=self.COMMISSION).values
-        deviate = abs(df['ans'] - df['cum_ret']).sum()
-        self.assertAlmostEqual(deviate, 0)
-
-    def test_next_c_chg_on_shortgo(self):
-        df = self.read_csv('next_c_chg_on_shortgo.csv')
-        df['cum_ret'] = run_pd_backtest(df, commission=self.COMMISSION).values
-        deviate = abs(df['ans'] - df['cum_ret']).sum()
-        self.assertAlmostEqual(deviate, 0)
-
-    def test_next_c_chg_before_long_exit(self):
-        df = self.read_csv('next_c_chg_before_long_exit.csv')
-        df['cum_ret'] = run_pd_backtest(df, commission=self.COMMISSION).values
-        deviate = abs(df['ans'] - df['cum_ret']).sum()
-        self.assertAlmostEqual(deviate, 0)
-
-    def test_next_c_chg_before_short_exit(self):
-        df = self.read_csv('next_c_chg_before_short_exit.csv')
-        df['cum_ret'] = run_pd_backtest(df, commission=self.COMMISSION).values
-        deviate = abs(df['ans'] - df['cum_ret']).sum()
-        self.assertAlmostEqual(deviate, 0)
-
-    def test_c_chg_on_longgo(self):
-        df = self.read_csv('c_chg_on_longgo.csv')
-        df['cum_ret'] = run_pd_backtest(df, commission=self.COMMISSION).values
-        deviate = abs(df['ans'] - df['cum_ret']).sum()
-        self.assertAlmostEqual(deviate, 0)
-
-    def test_c_chg_on_shortgo(self):
-        df = self.read_csv('c_chg_on_shortgo.csv')
-        df['cum_ret'] = run_pd_backtest(df, commission=self.COMMISSION).values
-        deviate = abs(df['ans'] - df['cum_ret']).sum()
-        self.assertAlmostEqual(deviate, 0)
-
-    def test_c_chg_before_long_exit(self):
-        df = self.read_csv('c_chg_before_long_exit.csv')
-        df['cum_ret'] = run_pd_backtest(df, commission=self.COMMISSION).values
-        deviate = abs(df['ans'] - df['cum_ret']).sum()
-        self.assertAlmostEqual(deviate, 0)
-
-    def test_c_chg_before_short_exit(self):
-        df = self.read_csv('c_chg_before_short_exit.csv')
-        df['cum_ret'] = run_pd_backtest(df, commission=self.COMMISSION).values
-        deviate = abs(df['ans'] - df['cum_ret']).sum()
-        self.assertAlmostEqual(deviate, 0)
 
 
 class ChandelierSignalAdderTest(unittest.TestCase):
@@ -106,16 +35,6 @@ class ChandelierSignalAdderTest(unittest.TestCase):
         signal_adder = ChandelierSignalAdder(df)
         signal_adder.add_position_direction()
         self.assertListEqual(df['ans_position_direction'].tolist(), signal_adder.df['position_direction'].tolist())
-
-    def test_cal_recent_high(self):
-        df = pd.read_csv('./test_data/test_cal_recent_high.csv')
-        res = cal_recent_high(df.close, 3)
-        self.assertListEqual(res.fillna(0).tolist(), df.ans.fillna(0).tolist())
-
-    def test_cal_recent_low(self):
-        df = pd.read_csv('./test_data/test_cal_recent_low.csv')
-        res = cal_recent_low(df.close, 3)
-        self.assertListEqual(res.fillna(0).tolist(), df.ans.fillna(0).tolist())
 
 
 class AvgCumRetTest(unittest.TestCase):

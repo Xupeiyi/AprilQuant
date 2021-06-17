@@ -8,7 +8,7 @@ def cal_cost_and_ret_value(cum_ret: pd.DataFrame):
     params:
         - cum_ret: 累计收益率曲线（未计算收益时累计收益率为1），字段为cum_ret。
     """
-    cost = cum_ret.cum_ret.shift(1).fillna(1)
+    cost = cum_ret.cum_ret.shift(1).fillna(cum_ret.cum_ret.iloc[0])
     ret_value = cum_ret.cum_ret - cost
     return pd.DataFrame(index=cum_ret.index,
                         data={'cost': cost.values, 'ret_value': ret_value.values})
@@ -22,11 +22,15 @@ def cal_avg_cum_ret(cum_rets: list):
     """
     计算平均累计收益率。
     """
+    cum_rets = [cum_ret for cum_ret in cum_rets if len(cum_ret) > 0]
+    if not cum_rets:
+        return pd.DataFrame(data={'datetime': [], 'cum_ret': []}).set_index('datetime')
+
     c_and_rs = [cal_cost_and_ret_value(cum_ret) for cum_ret in cum_rets]
     sum_c_and_r = reduce(fill0_add, c_and_rs)
     sum_c_and_r['avg_ret'] = (sum_c_and_r['ret_value'] / sum_c_and_r['cost']).fillna(0)
     sum_c_and_r['cum_ret'] = (1 + sum_c_and_r['avg_ret']).cumprod()
-    return sum_c_and_r['cum_ret']
+    return sum_c_and_r[['cum_ret']]
 
 
 def cum_ret_to_daily_ret(cum_ret: pd.Series):
@@ -41,3 +45,16 @@ def cum_ret_to_daily_ret(cum_ret: pd.Series):
     # 计算日收益率
     cum_ret_daily['daily_ret'] = cum_ret_daily['cum_ret'] / cum_ret_daily['cum_ret'].shift(1).fillna(1) - 1
     return cum_ret_daily.daily_ret
+
+
+def cum_ret_from_doc(document):
+    data = document.get('cum_ret', {'datetime': [], 'cum_ret': []})
+    cum_ret = pd.DataFrame(data).set_index('datetime')
+    return cum_ret
+
+
+def avg_cum_ret_from_cursor(cursor):
+    cum_rets = [cum_ret_from_doc(doc) for doc in cursor]
+    cum_rets = [cum_ret for cum_ret in cum_rets if len(cum_ret) > 0]
+    avg_cum_ret = cal_avg_cum_ret(cum_rets)
+    return avg_cum_ret
