@@ -50,7 +50,5 @@ class Tester:
         except AllNaError as e:
             res['error'] = str(e)
         else:
-            # 累计收益率
-            cum_ret = run_pd_backtest(self.df, commission=commission)
-            res['cum_ret'] = cum_ret.reset_index().to_dict('list')
+            res['result'] = run_pd_backtest(self.df, params=params)
         return res
