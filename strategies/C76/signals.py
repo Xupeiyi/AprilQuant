@@ -1,9 +1,8 @@
 from functools import partial
 
 import pandas as pd
-from talib import SMA
 
-from backtest.indicators import EMA, TR
+from backtest.indicators import MA, EMA, TR
 from backtest.signals import add_chandelier_exit_signal, add_position_direction
 from backtest.tester import Tester
 
@@ -13,8 +12,8 @@ def add_enter_signal(df, fast_length=25, slow_length=115, macd_length=9):
     low = df.adjusted_low
     close = df.adjusted_close
 
-    fast_ma = SMA(close, fast_length)
-    slow_ma = SMA(close, slow_length)
+    fast_ma = MA(close, fast_length)
+    slow_ma = MA(close, slow_length)
     diff = EMA(close, fast_length) - EMA(close, slow_length)
     dea = EMA(diff, macd_length)
     macd = diff - dea
@@ -31,7 +30,7 @@ def add_enter_signal(df, fast_length=25, slow_length=115, macd_length=9):
     dmm = (((low_diff > 0) & (low_diff > high_diff)) * low_diff).rolling(slow_length).sum()
     mdi = dmm * 100 / tr
 
-    adx = SMA(abs(mdi - pdi)/(mdi + pdi) * 100, fast_length)
+    adx = MA(abs(mdi - pdi)/(mdi + pdi) * 100, fast_length)
     xadx = (adx > adx.shift(1)) & (adx > 20)
 
     df['longgo'] = ((macd > 0) & xadx & (fast_ma > slow_ma)).shift(1).fillna(False)

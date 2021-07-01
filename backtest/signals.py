@@ -1,4 +1,6 @@
 import pandas as pd
+
+from backtest.indicators import ATR
 from utils import has_column
 
 
@@ -65,17 +67,17 @@ def add_adjusted_price(df):
     """
     # 计算复权因子
     if 0 in df['preclose'].values:
-        raise ZeroDivisionError("preclose字段中存在0！")
+        raise AddSignalError("preclose字段中存在0！")
     adjust_factor = (df['close'] / df['preclose']).cumprod()
 
     # 计算前复权收盘价
     if 0 in adjust_factor.values:
-        raise ZeroDivisionError("复权因子中存在0！")
+        raise AddSignalError("复权因子中存在0！")
     df['adjusted_close'] = adjust_factor * (df['close'].iloc[0] / adjust_factor.iloc[0])
 
     # 对 open, high, low 以同比例放缩
     if 0 in df['close'].values:
-        raise ZeroDivisionError("close字段中存在0！")
+        raise AddSignalError("close字段中存在0！")
     r = df['adjusted_close'] / df['close']
     for price in ['open', 'high', 'low']:
         df['adjusted_' + price] = df[price] * r
@@ -85,23 +87,26 @@ def add_chandelier_exit_signal(df, trs=0.12, lqk_width=0.1, lqk_floor=0.5):
     """
     添加吊灯线止损信号。
     在df中标记平仓日期。非纯函数。平仓信号使用复权价格计算。
-    平仓信号计算方法：开多头仓位时记当期开盘价为lower_after_entry，之后在
-                      持仓的每一期选取当期最低价和上一期lower_after_entry
-                      中较大者为当期lower_after_entry，并计算吊灯线dliqpoint。
-                      若dliqpoint低于收盘价则平多头。开空头仓位时同理。
-                      止损止盈幅度乘数liqka随时间推移从1减小为0.5，每期减小0.1，
-                      这使吊灯线变得更加敏感。
+    平仓信号计算方法：开多头仓位时记当期最低价与前收盘价中较高者为lower_after_entry，之后在
+                   持仓的每一期选取当期最低价和上一期lower_after_entry
+                   中较大者为当期lower_after_entry，并计算吊灯线dliqpoint。
+                   若dliqpoint低于收盘价则平多头。
+                   开空头仓位时同理。
+                   止损止盈幅度乘数liqka随时间推移从1减小为lqk_floor，每期减小lqk_width，
+                   这使吊灯线变得更加敏感。
     params:
         - df: 一段连续的行情数据。需要行情中包括前复权开盘价adjusted_open,
               最高价adjusted_high, 前复权最低价adjusted_low, 前复权收盘价
-              adjusted_close。并标注开仓时刻longgo和shortgo。
+              adjusted_close，并标注开仓时刻longgo和shortgo。
         - trs: 用于调整吊灯线与价格之间的距离。trs越大则吊灯线越不敏感。
+        - lqk_width: liqka每期减小的步长。
+        - lqk_floor: liqka能达到的最小值。
     """
 
     position_direction = 0  # 当前头寸方向。1为多头，-1为空头，0为无头寸。
 
-    df['higher_after_entry'] = 0  # 开仓以来最高价
-    df['lower_after_entry'] = 0  # 开仓以来最低价
+    df['higher_after_entry'] = 0  # 开仓以来较高价
+    df['lower_after_entry'] = 0  # 开仓以来较低价
     df['dliqpoint'] = 0  # 多头吊灯线
     df['kliqpoint'] = 0  # 空头吊灯线
     df['liqka'] = 1  # 止盈止损幅度乘数
@@ -143,7 +148,7 @@ def add_chandelier_exit_signal(df, trs=0.12, lqk_width=0.1, lqk_floor=0.5):
 
             if position_direction > 0:
                 df.lower_after_entry.iloc[i] = max(df.adjusted_low.iloc[i],
-                                                        df.lower_after_entry.iloc[i - 1])
+                                                   df.lower_after_entry.iloc[i - 1])
                 df.dliqpoint.iloc[i] = df.lower_after_entry.iloc[i] - delta
 
                 # 平仓日期是计算出平仓信号的后一天
@@ -151,7 +156,7 @@ def add_chandelier_exit_signal(df, trs=0.12, lqk_width=0.1, lqk_floor=0.5):
                     df.long_exit.iloc[i + 1] = True
             else:
                 df.higher_after_entry.iloc[i] = min(df.adjusted_high.iloc[i],
-                                                         df.higher_after_entry.iloc[i - 1])
+                                                    df.higher_after_entry.iloc[i - 1])
                 df.kliqpoint.iloc[i] = df.higher_after_entry.iloc[i] + delta
 
                 # 平仓日期是计算出平仓信号的后一天
@@ -187,3 +192,59 @@ def add_position_direction(df):
             continue
 
         df.position_direction.iloc[i] = df.position_direction.iloc[i - 1]
+
+
+def add_atr_exit_signal(df, atr_length, trs):
+    close, high, low = df.adjusted_close, df.adjusted_high, df.adjusted_low
+
+    df['atr'] = ATR(high=high, low=low, close=close, timeperiod=atr_length)
+
+    position_direction = 0
+    df['highest_after_entry'] = 0  # 开仓以来最高价
+    df['lowest_after_entry'] = 0  # 开仓以来最低价
+
+    if not has_column(df, 'long_exit'):
+        df['long_exit'] = False  # 多头平仓日期
+
+    if not has_column(df, 'short_exit'):
+        df['short_exit'] = False  # 空头平仓日期
+
+    for i in range(len(df)-1):
+
+        # 开多头
+        if df.longgo.iloc[i] and position_direction <= 0:
+            position_direction = 1
+            df.lowest_after_entry.iloc[i] = low.iloc[i]
+            continue
+
+        # 开空头
+        if df.shortgo.iloc[i] and position_direction >= 0:
+            position_direction = -1
+            df.highest_after_entry.iloc[i] = high.iloc[i]
+            continue
+
+        # 平多头
+        if df.long_exit.iloc[i] and position_direction > 0:
+            position_direction = 0
+            continue
+
+        # 平空头
+        if df.short_exit.iloc[i] and position_direction < 0:
+            position_direction = 0
+            continue
+
+        # 有持仓时计算出场条件
+        if position_direction != 0:
+
+            if position_direction > 0:
+                df.highest_after_entry.iloc[i] = max(high.iloc[i],
+                                                     df.highest_after_entry.iloc[i - 1])
+                # 平仓日期是计算出平仓信号的后一天
+                if close.iloc[i] < df.highest_after_entry.iloc[i] - trs * df.atr.iloc[i]:
+                    df.long_exit.iloc[i + 1] = True
+            else:
+                df.lowest_after_entry.iloc[i] = min(low.iloc[i],
+                                                    df.lowest_after_entry.iloc[i - 1])
+                # 平仓日期是计算出平仓信号的后一天
+                if close.iloc[i] > df.lowest_after_entry.iloc[i] + trs * df.atr.iloc[i]:
+                    df.short_exit.iloc[i + 1] = True

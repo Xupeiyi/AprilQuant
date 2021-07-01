@@ -15,6 +15,8 @@ class Tester:
 
     @classmethod
     def read_cache(cls, level):
+        cls.backtest_data = defaultdict(list)
+
         level_root_path = CACHE_ROOT_DIR + f'{level}\\'
         categories = os.listdir(level_root_path)
 
@@ -51,9 +53,4 @@ class Tester:
             # 累计收益率
             cum_ret = run_pd_backtest(self.df, commission=commission)
             res['cum_ret'] = cum_ret.reset_index().to_dict('list')
-
-            # sharpe比率
-            daily_ret = cum_ret_to_daily_ret(cum_ret)
-            res['sharpe_ratio'] = sharpe_ratio(daily_ret, period='daily')
-
         return res

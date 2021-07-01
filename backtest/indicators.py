@@ -24,7 +24,7 @@ def EMA(s: pd.Series, timeperiod):
 
 
 @not_full_of_na
-def SMA(s, timeperiod, weight=1):
+def SMA(s, timeperiod, weight):
     alpha = weight / timeperiod
     return s.ewm(alpha=alpha, adjust=False).mean()
 
@@ -81,6 +81,11 @@ def TR(high, low, close):
 
 
 @not_full_of_na
-def AATR(high, low, close, timeperiod):
+def ATR(high, low, close, timeperiod):
     tr = TR(high, low, close)
     return MA(tr, timeperiod)
+
+
+@not_full_of_na
+def momentum(close, timeperiod):
+    return close.rolling(timeperiod + 1).apply(lambda x: x.iloc[-1] / x.iloc[0] - 1).shift(1)

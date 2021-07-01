@@ -1,6 +1,6 @@
 import unittest
 import pandas as pd
-from backtest.indicators import AllNaError, HHV, LLV, BARSLAST, CCI
+from backtest.indicators import AllNaError, HHV, LLV, BARSLAST, CCI, momentum
 
 
 class RecentHighTest(unittest.TestCase):
@@ -46,3 +46,15 @@ class BarsLastTest(unittest.TestCase):
     def test_when_no_bar_satisfies(self):
         res = BARSLAST(self.df.open > 2000)
         self.assertTrue((res == self.df.res_open_gt_2000).all())
+
+
+class MomentumTest(unittest.TestCase):
+    df = pd.read_csv('./indicators_data/test_momentum.csv')
+
+    def test_a_normal_case(self):
+        res = momentum(self.df.close, timeperiod=5)
+        delta = abs(res - self.df.momentum).sum()
+        self.assertAlmostEqual(delta, 0)
+
+    def test_a_too_short_series(self):
+        self.assertRaises(AllNaError, momentum, self.df.close.iloc[0:5], 5)

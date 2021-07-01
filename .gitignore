@@ -1,3 +1,5 @@
 /data/
-/cache/
+/cache/daily
+/cache/15min
+/cache/30min
 git

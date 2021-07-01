@@ -3,6 +3,7 @@ from datetime import datetime
 
 import pymongo
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 def has_column(df, *columns):
@@ -34,22 +35,6 @@ def expand(ts: pd.DataFrame, expand_range: pd.DataFrame):
     return expand_range.join(ts)
 
 
-# def query0(db, col, category=None, length=60, ema_length=150, trs=0.12, lqk_width=0.1, lqk_floor=0.5):
-#     params_dict = dict()
-#     if category is not None:
-#         params_dict['params.data_label.category'] = category
-#     params_dict['params.enter_signal'] = {
-#         'length': length,
-#         'ema_length': ema_length
-#     }
-#     params_dict['params.exit_signal'] = {
-#         'trs': trs,
-#         'lqk_width': lqk_width,
-#         'lqk_floor': lqk_floor
-#     }
-#     return db[col].find(params_dict)
-
-
 def query(db_name, col, client_name="mongodb://localhost:27017/", **kwargs):
     params_dict = {f'params.{k}': v for k, v in kwargs.items()}
     client = pymongo.MongoClient(client_name)
@@ -62,3 +47,11 @@ def save_results(results, db_name, col_name, client_name="mongodb://localhost:27
     db = client[db_name]
     col = db[col_name]
     col.insert_many(results)
+
+
+def plot_curves(curves, title, legends):
+    fig = plt.figure(figsize=(16, 9))
+    plt.title(title)
+    for curve in curves:
+        plt.plot(curve)
+    plt.legend(legends)

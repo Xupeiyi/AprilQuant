@@ -1,30 +1,28 @@
-import time
-
-from backtest.parallel import test_many, gen_params_list
+from backtest.parallel import test_by_params_range
 from signals import C76Tester
-from utils import save_results
-
-
-LEVEL = 'daily'
-C76Tester.read_cache('daily')
 
 
 if __name__ == '__main__':
-    params_list = gen_params_list(C76Tester,
-                                  fast_length=(25,),
-                                  slow_length=(115,),
-                                  macd_length=(9,),
-                                  trs=(0.045,))
-    params_list = list(params_list)
-    BATCH = 1000
-    iters = int(len(params_list) / BATCH) + 1
+    fast_length_rng = (15, 20, 25, 30, 35)
+    slow_length_rng = (85, 100, 115, 130, 145)
+    macd_length_rng = (5, 7, 9, 11, 13)
+    chandelier_rng_d = dict(trs=(0.12,))
+    chandelier_rng_m = dict(trs=(0.06,))
 
-    start = time.time()
-    for i in range(iters):
-        params_sample = params_list[BATCH*i: BATCH*(i+1)]
-        testers_list = (C76Tester(params) for params in params_sample)
-        results = test_many(testers_list, max_workers=20)
-        save_results(results, db_name='C76', col_name=LEVEL)
-        print(f'batch {i+1} in {iters} completed!')
-    end = time.time()
-    print(f'Used time: {end - start}')
+    test_by_params_range(C76Tester, level='daily', batch=200, max_workers=18,
+                         fast_length=fast_length_rng,
+                         slow_length=slow_length_rng,
+                         macd_length=macd_length_rng,
+                         **chandelier_rng_d)
+
+    test_by_params_range(C76Tester, level='15min', batch=200, max_workers=18,
+                         fast_length=fast_length_rng,
+                         slow_length=slow_length_rng,
+                         macd_length=macd_length_rng,
+                         **chandelier_rng_m)
+
+    test_by_params_range(C76Tester, level='30min', batch=200, max_workers=18,
+                         fast_length=fast_length_rng,
+                         slow_length=slow_length_rng,
+                         macd_length=macd_length_rng,
+                         **chandelier_rng_m)
