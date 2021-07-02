@@ -3,8 +3,6 @@ import unittest
 import pandas as pd
 
 from utils import select_high_liquidity_data
-from strategies.CCI.signals import ChandelierSignalAdder
-from strategies.CCI.make_minute_cache import resample_minute_data, correct_preclose
 
 
 class SelectHighLiquidityDataTest(unittest.TestCase):
@@ -21,24 +19,6 @@ class SelectHighLiquidityDataTest(unittest.TestCase):
 
 
 
-class ChandelierSignalAdderTest(unittest.TestCase):
-
-    def test_add_chg_signal(self):
-        df = pd.read_csv('./test_data/test_add_chg_signal.csv', parse_dates=['datetime'])
-        signal_adder = ChandelierSignalAdder(df)
-        signal_adder.add_chg_signal()
-        self.assertListEqual(df['ans_next_c_chg'].tolist(), signal_adder.df['next_c_chg'].tolist())
-        self.assertListEqual(df['ans_c_chg'].tolist(), signal_adder.df['c_chg'].tolist())
-
-    def test_add_position_direction(self):
-        df = pd.read_csv('./test_data/test_add_position_direction.csv', parse_dates=['datetime'])
-        signal_adder = ChandelierSignalAdder(df)
-        signal_adder.add_position_direction()
-        self.assertListEqual(df['ans_position_direction'].tolist(), signal_adder.df['position_direction'].tolist())
-
-
-
-
 
 class ResampleMinuteDataTest(unittest.TestCase):
 
@@ -49,13 +29,6 @@ class ResampleMinuteDataTest(unittest.TestCase):
         self.assertFalse(abs(ans - resampled).sum().any())
 
 
-class CorrectPrecloseTest(unittest.TestCase):
-
-    def test_a_normal_case(self):
-        m_data = pd.read_csv('./test_data/correct_preclose/minute_data.csv')
-        correct_preclose(m_data)
-        ans = pd.read_csv('./test_data/correct_preclose/ans.csv')
-        self.assertFalse(abs(ans - m_data).sum().any())
 
 
 if __name__ == '__main__':

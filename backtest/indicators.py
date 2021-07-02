@@ -154,6 +154,11 @@ def ATR(high, low, close, timeperiod):
 def momentum(close, timeperiod):
     """
     计算序列的动量效应。
-    第T期的动量效应定义为第(T - timeperiod)期到第(T - 1)期的收益率。
+    第T期的动量效应定义为第(T - timeperiod)期到第(T - 1)期的累计收益率。
     """
-    return close.rolling(timeperiod).apply(lambda price: price.iloc[-1] / price.iloc[0] - 1).shift(1)
+    # 注意：这里的时间窗口应为timeperiod + 1 而非 timeperiod,
+    # 因为计算(T - timperiod)期的收益率需要用到(T - (timperiod+1))期的收盘价
+    # (1 + ret_{T-timeperiod}) * ... * (1 + ret_{T - 1})
+    # = (close_{T-timeperiod} / close_{T - (timeperiod + 1)}) * ... (close_{T - 1} / close_{T - 2})
+    # = close_{T - 1} / close_{T - (timeperiod + 1)}
+    return close.rolling(timeperiod + 1).apply(lambda price: price.iloc[-1] / price.iloc[0] - 1).shift(1)

@@ -7,4 +7,4 @@ DATA_MINUTE_DIR = _current_path + '\\data\\minute\\'
 C_DAILY = os.listdir(CACHE_ROOT_DIR + 'daily')
 C_15MIN = os.listdir(CACHE_ROOT_DIR + '15min')
 C_30MIN = os.listdir(CACHE_ROOT_DIR + '30min')
-
+MONGODB_CLIENT = "mongodb://localhost:27017/"
