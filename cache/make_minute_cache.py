@@ -3,20 +3,20 @@ import numpy as np
 import pandas as pd
 from concurrent import futures
 from functools import partial
-
 from dateutil.parser import parse
 
 from backtest.tester import Tester
 from backtest.signals import add_chg_signal, add_adjusted_price
-from utils import mkdirs
-from consts import DATA_MINUTE_DIR
+from utils import mkdirs, must_have_col
+from consts import DATA_MINUTE_DIR, CACHE_ROOT_DIR
 
+START = '2010-01-01'
 Tester.read_cache('daily')
 
 
 def extract_category_from_file_name(file_name: str) -> str:
     """
-        从csv文件名中获得品种代码。
+    从csv文件名中获得品种代码。
     :param: file_name: csv文件名。
     :return: category: 品种代码
     """
@@ -24,12 +24,14 @@ def extract_category_from_file_name(file_name: str) -> str:
     return category
 
 
-def get_datetime_str(minute_data):
+@must_have_col('actionday', 'minute')
+def get_datetime_str(df):
     """获得字符串形式的datetime"""
-    return minute_data['actionday'].strftime('%Y-%m-%d') + ' ' + minute_data['minute']
+    return df['actionday'].strftime('%Y-%m-%d') + ' ' + df['minute']
 
 
 def kline_resampler(df):
+    """将多根ｋ线行情合成为一根"""
     if df.name == 'mhigh':
         return df.max()
     elif df.name == 'mlow':
@@ -49,10 +51,9 @@ def resample_minute_data(minute_data, level):
     将分钟级数据合成为level级数据。合成数据的datetime为bar结束时的时间。
 
     :param minute_data: 分钟级数据。
-    :param level: 合成数据时间粒度。
+    :param level: 合成数据时间粒度, 如"15min", "30min"等。
     :return: resampled 合成后数据。
     """
-
     resampled = minute_data.set_index('datetime')\
                            .resample(level, label='right', closed='right')\
                            .apply(kline_resampler)\
@@ -67,13 +68,15 @@ def resample_minute_data(minute_data, level):
     return resampled
 
 
-def extract_sub_m_data(m_data, date_range):
-    return date_range.join(m_data.set_index('actionday'), how='inner')
+def extract_data(df, date_range):
+    """选取actionday在date_range中的行情"""
+    return date_range.join(df.set_index('actionday'), how='inner')
 
 
+@must_have_col('c_chg', 'preclose')
 def correct_preclose(df):
     """
-    考虑更换合约的情况，获得正确的preclose。
+    获得正确的preclose（部分分钟级数据中存在preclose为0的情况）。
     若是新更换的合约，则preclose为表中字段的值。否则preclose为上一行的close。
     :param df: 已添加c_chg字段
     :return: 非纯函数。
@@ -83,27 +86,43 @@ def correct_preclose(df):
     df.drop(columns=['above_line_close'], inplace=True)
 
 
-def make_cache(category, level):
-    m_data = pd.read_csv(DATA_MINUTE_DIR + f'\\m1_{category.lower()}.csv', parse_dates=['actionday'])
-    m_data = m_data[m_data.actionday > parse('2010-01-01')]
-    m_data['datetime'] = pd.to_datetime(m_data.apply(get_datetime_str, axis=1))
-
-    resampled_data = resample_minute_data(m_data, level)
-
-    hi_liq_date_ranges = [d_data[['datetime']].set_index('datetime').rename(columns={'datetime': 'actionday'})
-                          for d_data in Tester.backtest_data[category]]
-    sub_data_list = [extract_sub_m_data(resampled_data, date_range) for date_range in hi_liq_date_ranges]
+def extract_high_liq_data(data, category) -> list:
+    """利用已完成过滤的日级数据过滤分钟级数据, 从中提取出流动性较高的部分."""
+    high_liq_date_ranges = [daily_df[['datetime']].set_index('datetime')
+                                                  .rename(columns={'datetime': 'actionday'})
+                            for daily_df in Tester.backtest_data[category]]
+    sub_data_list = [extract_data(data, date_range) for date_range in high_liq_date_ranges]
     sub_data_list = [sub_data for sub_data in sub_data_list if len(sub_data) > 0]
+    return sub_data_list
 
-    for i, original_sub_data in enumerate(sub_data_list):
-        sub_data = original_sub_data.copy()
-        add_chg_signal(sub_data)
-        correct_preclose(sub_data)
-        add_adjusted_price(sub_data)
 
-        cache_dir = f'../../cache/{level}/{category}'
+def get_minute_data(category):
+    """获得某品种期货合约的分钟级行情数据"""
+    minute_data = pd.read_csv(DATA_MINUTE_DIR + f'\\m1_{category.lower()}.csv', parse_dates=['actionday'])
+    minute_data = minute_data[minute_data.actionday > parse(START)]
+    minute_data['datetime'] = pd.to_datetime(minute_data.apply(get_datetime_str, axis=1))
+    return minute_data
+
+
+def make_cache(category, level):
+    """
+    合成并保存可供回测使用的分钟级数据.
+    params:
+        - category: 期货品种
+        - level: 合成数据时间级别，应输入能作为pandas.DataFrame.resample函数参数的字符串， 如"15min"。
+    """
+    m_data = get_minute_data(category)
+    resampled_data = resample_minute_data(m_data, level)
+    high_liq_data = extract_high_liq_data(resampled_data, category)
+
+    for i, df in enumerate(high_liq_data):
+        add_chg_signal(df)
+        correct_preclose(df)
+        add_adjusted_price(df)
+
+        cache_dir = CACHE_ROOT_DIR + f'{level}\\{category}'
         mkdirs(cache_dir)
-        sub_data.to_csv(f'{cache_dir}/{i}.csv', encoding='utf-8', index=False)
+        df.to_csv(f'{cache_dir}\\{i}.csv', encoding='utf-8', index=False)
 
     return category
 
@@ -113,8 +132,8 @@ make_30min_cache = partial(make_cache, level='30min')
 
 
 if __name__ == '__main__':
-    file_names = os.listdir(DATA_MINUTE_DIR)
-    categories = [extract_category_from_file_name(file_name) for file_name in file_names]
+    minute_file_names = os.listdir(DATA_MINUTE_DIR)
+    categories = [extract_category_from_file_name(file_name) for file_name in minute_file_names]
 
     print("making 15min cache...")
     with futures.ProcessPoolExecutor(20) as executor:
@@ -125,5 +144,4 @@ if __name__ == '__main__':
     with futures.ProcessPoolExecutor(20) as executor:
         res = executor.map(make_30min_cache, categories)
     print(f'{sorted(list(res))} completed!')
-    # make_15min_cache('SR')
-    # make_30min_cache('SR')
+

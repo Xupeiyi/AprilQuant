@@ -15,7 +15,11 @@ def has_column(df: pd.DataFrame, *columns):
 
 
 def must_have_col(*columns):
-    """在运行函数前检查df中是否包含columns列"""
+    """
+    在运行函数前检查df中是否包含columns列．
+    尽管pandas自然会在发现缺失列时报错，使用此装饰器可以显式
+    地表明函数依赖的字段，并避免在完成某些耗时的运算后才报错．
+    """
     def decorator(f):
         @wraps(f)
         def decorated(df, *args, **kwargs):
