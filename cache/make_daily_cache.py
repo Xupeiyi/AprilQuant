@@ -2,12 +2,12 @@ import re
 from functools import partial
 from concurrent import futures
 
-import talib
 import pandas as pd
 from dateutil.parser import parse
 
-from utils import pre_is_diff, mkdirs
+from utils import pre_is_diff, mkdirs, must_have_col
 from consts import DATA_DAILY_DIR
+from backtest.indicators import MA
 from backtest.signals import add_chg_signal, add_adjusted_price, AddSignalError
 
 
@@ -26,10 +26,10 @@ def get_commodity_category(code: str):
     return category
 
 
+@must_have_col('volume')
 def select_high_liquidity_data(df: pd.DataFrame, threshold=50000, period=1 / 20) -> list:
     """
-    从一个品种的数据中提取出几段入选的数据。非纯函数。
-
+    从一个品种的数据中提取出几段流动性较高的数据。
     入选规则：对每一天的行情添加qualified变量，成交量大于等于threshold记为1，小于threshold记为-1。
               对qualified求移动平均值，选入移动平均值大于0的每段行情。
 
@@ -42,24 +42,31 @@ def select_high_liquidity_data(df: pd.DataFrame, threshold=50000, period=1 / 20)
     """
 
     df['volume_gt_threshold'] = df.volume.apply(lambda x: 1 if x >= threshold else -1)
-    df['volume_gt_threshold_ma'] = talib.SMA(df.volume_gt_threshold, len(df) * period)
+    df['volume_gt_threshold_ma'] = MA(df.volume_gt_threshold, int(len(df) * period))
     df['qualified'] = df.volume_gt_threshold_ma >= 0
 
-    # 根据qualified将df分段，每一段数据中qualified都为True，或False
+    # 根据qualified将df分段，每一段数据中qualified都为True或False, 选出qualified为True的部分
     df['qualified_chg'] = pre_is_diff(df.qualified)
-    df['group_num'] = df['qualified_chg'].astype('int').cumsum()
-
+    df['group_num'] = df['qualified_chg'].cumsum()
     qualified_data = [sub_df for group_num, sub_df
-                      in df[df.qualified != 0].groupby('group_num')]
+                      in df[df.qualified].groupby('group_num')]
     return qualified_data
 
 
 def select_all_data(df: pd.DataFrame):
-    qualified_data = [df]
-    return qualified_data
+    """不做过滤，选择所有的行情"""
+    return [df]
 
 
 def make_cache(category, filter_function, col):
+    """
+    生成并保存可供回测使用的日级数据．
+
+    params:
+        - category: 期货品种代码，1-2位大写字母。
+        - filter_function: 行情过滤函数, 应返回一个list
+        - col: 数据集名称
+    """
     global data
     cat_data = data[data.category == category]
     qualified_data = filter_function(cat_data)
