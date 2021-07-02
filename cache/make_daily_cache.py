@@ -5,7 +5,9 @@ from concurrent import futures
 import talib
 import pandas as pd
 from dateutil.parser import parse
-from utils import mkdirs
+
+from utils import pre_is_diff, mkdirs
+from consts import DATA_DAILY_DIR
 from backtest.signals import add_chg_signal, add_adjusted_price, AddSignalError
 
 
@@ -44,7 +46,7 @@ def select_high_liquidity_data(df: pd.DataFrame, threshold=50000, period=1 / 20)
     df['qualified'] = df.volume_gt_threshold_ma >= 0
 
     # 根据qualified将df分段，每一段数据中qualified都为True，或False
-    df['qualified_chg'] = (df.qualified != df.qualified.shift(1).fillna(df.qualified.iloc[0]))
+    df['qualified_chg'] = pre_is_diff(df.qualified)
     df['group_num'] = df['qualified_chg'].astype('int').cumsum()
 
     qualified_data = [sub_df for group_num, sub_df
@@ -78,29 +80,15 @@ def make_cache(category, filter_function, col):
 make_daily_cache = partial(make_cache, filter_function=select_high_liquidity_data, col='daily')
 make_daily_no_filter_cache = partial(make_cache, filter_function=select_all_data, col='daily_no_filter')
 
-data = pd.read_csv('../data/daily/commodity.csv', parse_dates=['datetime'])
+data = pd.read_csv(DATA_DAILY_DIR + 'commodity.csv', parse_dates=['datetime'])
 data = data[data.datetime > parse('2010-01-01')]
 data['category'] = data['code'].apply(get_commodity_category)
 categories = data.category.unique().tolist()
 
 
 if __name__ == '__main__':
-    print(data[(data.category == 'JR') & (data.preclose == 0)])
 
-    # with futures.ProcessPoolExecutor(20) as executor:
-    #     res = executor.map(make_daily_no_filter_cache, categories)
-    # print(f'{sorted(list(res))} completed!')
+    with futures.ProcessPoolExecutor(20) as executor:
+        res = executor.map(make_daily_no_filter_cache, categories)
+    print(f'{sorted(list(res))} completed!')
 
-
-    #
-    # qualified_data = {category: select_high_liquidity_data(df) for category, df in data.groupby('category')}
-    #
-    # for category, df_list in qualified_data.items():
-    #     for i, df in enumerate(df_list):
-    #         signal_adder = ChandelierSignalAdder(df)
-    #         signal_adder.add_chg_signal()
-    #         signal_adder.add_adjusted_price()
-    #
-    #         directory_path = f'../../cache/daily/{category}'
-    #         mkdirs(directory_path)
-    #         signal_adder.df.to_csv(f'{directory_path}/{i}.csv', encoding='utf-8', index=False)

@@ -86,7 +86,6 @@ def correct_preclose(df):
 def make_cache(category, level):
     m_data = pd.read_csv(DATA_MINUTE_DIR + f'\\m1_{category.lower()}.csv', parse_dates=['actionday'])
     m_data = m_data[m_data.actionday > parse('2010-01-01')]
-    # m_data.rename(columns={'deliv_mon': 'delivery_month'}, inplace=True)
     m_data['datetime'] = pd.to_datetime(m_data.apply(get_datetime_str, axis=1))
 
     resampled_data = resample_minute_data(m_data, level)

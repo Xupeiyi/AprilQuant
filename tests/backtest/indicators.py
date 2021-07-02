@@ -58,3 +58,7 @@ class MomentumTest(unittest.TestCase):
 
     def test_a_too_short_series(self):
         self.assertRaises(AllNaError, momentum, self.df.close.iloc[0:5], 5)
+
+
+if __name__ == '__main__':
+    unittest.main()
