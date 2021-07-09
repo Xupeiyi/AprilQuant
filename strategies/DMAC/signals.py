@@ -14,6 +14,7 @@ def add_enter_signal(df, short_length, long_length, break_in):
 
 
 def add_exit_signal(df, atr_length, trs):
+    """切换合约时平仓，或"""
     add_atr_exit_signal(df, atr_length, trs)
     df['long_exit'] = df['long_exit'] | df['next_c_chg']
     df['short_exit'] = df['short_exit'] | df['next_c_chg']

@@ -2,7 +2,7 @@ import pandas as pd
 import talib
 
 from backtest.signals import add_chandelier_exit_signal, add_position_direction
-from backtest.indicators import HHV, LLV, EMA
+from backtest.indicators import HHV, LLV, EMA, CCI
 
 from backtest.tester import Tester
 
@@ -21,7 +21,7 @@ def add_enter_signal(df, length=60, ema_length=150):
     df['recent_high'] = HHV(df.adjusted_high, length)
     df['recent_low'] = LLV(df.adjusted_low, length)
     df['avg_high_low'] = (df.adjusted_high + df.adjusted_low) * 0.5
-    df['cci'] = talib.CCI(df.adjusted_high, df.adjusted_low, df.adjusted_close, length)
+    df['cci'] = CCI(df.adjusted_high, df.adjusted_low, df.adjusted_close, length)
     df['cci_ema'] = EMA(df.cci, timeperiod=ema_length)
 
     # 标记开仓日期longgo, shortgo。开仓日期为实际发生交易的日期，是计算出信号的后一天
@@ -50,3 +50,4 @@ class C73Tester(Tester):
                                    lqk_width=params['lqk_width'],
                                    lqk_floor=params['lqk_floor'])
         add_position_direction(self.df)
+

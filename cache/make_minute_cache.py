@@ -6,12 +6,13 @@ from functools import partial
 from dateutil.parser import parse
 
 from backtest.tester import Tester
-from backtest.signals import add_chg_signal, add_adjusted_price
+from cache.funcs import add_chg_signal, add_adjusted_price
 from utils import mkdirs, must_have_col
 from consts import DATA_MINUTE_DIR, CACHE_ROOT_DIR
 
-START = '2010-01-01'
 Tester.read_cache('daily')
+START = '2010-01-01'
+DAILY_CACHE = Tester.backtest_data
 
 
 def extract_category_from_file_name(file_name: str) -> str:
@@ -24,7 +25,6 @@ def extract_category_from_file_name(file_name: str) -> str:
     return category
 
 
-@must_have_col('actionday', 'minute')
 def get_datetime_str(df):
     """获得字符串形式的datetime"""
     return df['actionday'].strftime('%Y-%m-%d') + ' ' + df['minute']
@@ -90,7 +90,7 @@ def extract_high_liq_data(data, category) -> list:
     """利用已完成过滤的日级数据过滤分钟级数据, 从中提取出流动性较高的部分."""
     high_liq_date_ranges = [daily_df[['datetime']].set_index('datetime')
                                                   .rename(columns={'datetime': 'actionday'})
-                            for daily_df in Tester.backtest_data[category]]
+                            for daily_df in DAILY_CACHE[category]]
     sub_data_list = [extract_data(data, date_range) for date_range in high_liq_date_ranges]
     sub_data_list = [sub_data for sub_data in sub_data_list if len(sub_data) > 0]
     return sub_data_list
@@ -133,7 +133,7 @@ make_30min_cache = partial(make_cache, level='30min')
 
 if __name__ == '__main__':
     minute_file_names = os.listdir(DATA_MINUTE_DIR)
-    categories = [extract_category_from_file_name(file_name) for file_name in minute_file_names]
+    categories = [extract_category_from_file_name(file_name) for file_name in minute_file_names][0:5]
 
     print("making 15min cache...")
     with futures.ProcessPoolExecutor(20) as executor:

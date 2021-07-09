@@ -1,3 +1,8 @@
+"""
+基于backtrader的回测。
+由于此模块在分钟级数据收益率计算上存在问题，目前已弃用此模块。
+"""
+
 from collections import OrderedDict
 
 import backtrader as bt

@@ -156,7 +156,7 @@ def momentum(close, timeperiod):
     计算序列的动量效应。
     第T期的动量效应定义为第(T - timeperiod)期到第(T - 1)期的累计收益率。
     """
-    # 注意：这里的时间窗口应为timeperiod + 1 而非 timeperiod,
+    # 注意：这里rolling的时间窗口应为timeperiod + 1 而非 timeperiod,
     # 因为计算(T - timperiod)期的收益率需要用到(T - (timperiod+1))期的收盘价
     # (1 + ret_{T-timeperiod}) * ... * (1 + ret_{T - 1})
     # = (close_{T-timeperiod} / close_{T - (timeperiod + 1)}) * ... (close_{T - 1} / close_{T - 2})

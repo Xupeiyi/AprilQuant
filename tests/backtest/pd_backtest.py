@@ -1,6 +1,6 @@
 import unittest
 import pandas as pd
-from backtest import run_pd_backtest
+from backtest.pd_backtest import run_pd_backtest
 
 
 class RunPdBacktestTest(unittest.TestCase):

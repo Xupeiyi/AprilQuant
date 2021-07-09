@@ -1,7 +1,7 @@
 import pandas as pd
 
 from backtest.tester import Tester
-from backtest.signals import add_chandelier_exit_signal, add_position_direction, add_avg_daily_last_adjusted_close
+from backtest.signals import add_chandelier_exit_signal, add_avg_daily_last_adjusted_close, add_position_direction
 from backtest.indicators import EMA, ATR, TR
 
 
@@ -38,7 +38,7 @@ def add_enter_signal(df, date_length, ma_length=12, eatr_pcnt=3):
     ).shift(1).fillna(False)
 
 
-def add_atr_exit_signal(df, xatr_pcnt=3):
+def add_exit_signal(df, xatr_pcnt=3):
     df.loc[df.dea_up_cross_0, 'exit_band_d'] = df.loc[df.dea_up_cross_0].eval('adjusted_low - @xatr_pcnt * atr')
     df.loc[df.dea_dn_cross_0, 'exit_band_k'] = df.loc[df.dea_dn_cross_0].eval('adjusted_high + @xatr_pcnt * atr')
     df[['exit_band_d', 'exit_band_k']] = df[['exit_band_d', 'exit_band_k']].fillna(method='ffill')
@@ -53,10 +53,9 @@ class C74Tester(Tester):
                          date_length=self.params['date_length'],
                          ma_length=self.params['ma_length'],
                          eatr_pcnt=self.params['eatr_pcnt'])
-        add_atr_exit_signal(self.df, xatr_pcnt=self.params['eatr_pcnt'])
+        add_exit_signal(self.df, xatr_pcnt=self.params['eatr_pcnt'])
         add_chandelier_exit_signal(self.df,
                                    trs=self.params['trs'],
                                    lqk_width=self.params['lqk_width'],
                                    lqk_floor=self.params['lqk_floor'])
         add_position_direction(self.df)
-

@@ -58,6 +58,6 @@ class C73TesterTest(unittest.TestCase):
                                                 '2019-01-14', '2019-09-12', '2019-11-25', '2020-05-14'])
 
     def test_cum_ret(self):
-        res = self.tester.test()
-        pd.DataFrame(res['cum_ret']).set_index('datetime').plot()
+        res = self.tester.test()['result']
+        pd.DataFrame(index=res['datetime'], data={'cum_ret': res['cum_ret']}).plot()
         plt.show()

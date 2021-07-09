@@ -49,7 +49,6 @@ def add_avg_daily_last_adjusted_close(df, date_length):
     df['avg_adjusted_close'] = df['avg_adjusted_close'].shift(-1).ffill()
 
 
-
 @must_have_col('deliv_mon')
 def add_chg_signal(df):
     """
