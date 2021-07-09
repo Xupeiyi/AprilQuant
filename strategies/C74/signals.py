@@ -1,5 +1,3 @@
-import pandas as pd
-
 from backtest.tester import Tester
 from backtest.signals import add_chandelier_exit_signal, add_avg_daily_last_adjusted_close, add_position_direction
 from backtest.indicators import EMA, ATR, TR
@@ -16,8 +14,8 @@ def add_enter_signal(df, date_length, ma_length=12, eatr_pcnt=3):
     df['dea'] = EMA(EMA(close, ma_length) - EMA(close, ma_length * 2), ma_length * 4)
     df['up_trend'] = df.dea > 0
     df['dn_trend'] = df.dea < 0
-    df['dea_up_cross_0'] = ~df.up_trend.shift(1).fillna(False) & df.up_trend
-    df['dea_dn_cross_0'] = ~df.dn_trend.shift(1).fillna(False) & df.dn_trend
+    df['dea_up_cross_0'] = ~df.up_trend.shift(1).fillna(False) & df.up_trend  # dea上穿0轴
+    df['dea_dn_cross_0'] = ~df.dn_trend.shift(1).fillna(False) & df.dn_trend  # dea下穿0轴
     df['tr'] = TR(high, low, close)
     df['atr'] = ATR(high, low, close, ma_length * 2)
 
@@ -53,7 +51,7 @@ class C74Tester(Tester):
                          date_length=self.params['date_length'],
                          ma_length=self.params['ma_length'],
                          eatr_pcnt=self.params['eatr_pcnt'])
-        add_exit_signal(self.df, xatr_pcnt=self.params['eatr_pcnt'])
+        add_exit_signal(self.df, xatr_pcnt=self.params['eatr_pcnt'])  # 为了减少依赖的变量，xatr_pcnt取值与eatr_pcnt相同
         add_chandelier_exit_signal(self.df,
                                    trs=self.params['trs'],
                                    lqk_width=self.params['lqk_width'],
